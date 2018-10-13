@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <meta charset="UTF-8">
+  <title>啊啊</title>
+  <style>
+  	body{    
+  		margin:0px;
+
+  	} 
+  	canvas{
+  		
+  		margin:0px;
+  		position:absolute;
+  	}
+  </style>
+  
+</head>
+
+<body>
+  
+<canvas id="c"></canvas>
+ 
+
+<script id="shader-fs" type="x-shader/x-fragment">
+				#ifdef GL_ES               
+				  precision mediump float;
+				  #endif
+			varying vec4 v_Color;
+    		void main(void) {
+    		 gl_FragColor = v_Color;   
+    	
+    		}
+		</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+	    
+    	attribute vec4 a_Position;
+    	attribute vec4 a_Color;
+    	attribute vec4 a_Normal;
+ 
+    	uniform mat4 u_MvpMatrix;
+    	uniform mat4 u_ModelMatrix;
+    	uniform mat4 u_NormalMatrix;
+    	
+    	uniform vec3 u_LightColor;
+    	uniform vec3 u_LightPosition;
+    	uniform vec3 u_AmbientLight; 
+    	
+        varying vec4 v_Color;
+        
+   	void main(void) {
+  		 gl_Position = u_MvpMatrix * a_Position; 
+  		 vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
+  		 vec4 vertexPosition = u_ModelMatrix * a_Position;
+  		 vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));
+         float nDotL = max(dot(lightDirection, normal), 0.0);
+         vec3 diffuse = u_LightColor * a_Color.rgb * nDotL;
+         vec3 ambient = u_AmbientLight * a_Color.rgb;
+         v_Color = vec4(diffuse + ambient, a_Color.a);
+  			  // v_Color = a_Color;
+  	}   
+</script>
+
+<script id="shader-vs2" type="x-shader/x-vertex">
+	    
+    	attribute vec4 a_Position;
+    	attribute vec4 a_Normal;
+      
+    	uniform mat4 u_MvpMatrix;	
+    	uniform mat4 rotation;
+    	uniform mat4 invMatrix;
+    	uniform vec3 eyePosition;
+    	
+      varying vec3 normal;
+      varying vec3 position;
+      varying vec3 eye;
+      
+   	void main(void) {
+
+  		gl_Position =  u_MvpMatrix * a_Position;
+  		normal = normalize(vec3(a_Normal));
+  		
+			position = a_Position.xyz;
+			eye = vec3(invMatrix * vec4(eyePosition, 0.0));
+	
+  	}   
+</script>
+<script id="shader-fs2" type="x-shader/x-fragment">
+				#ifdef GL_ES               
+				  precision mediump float;
+				  #endif
+				  uniform samplerCube mapCube;
+				  
+					varying vec3 normal;
+					varying vec3 position;
+					varying vec3 eye;
+    		  void main(void) {
+    		   
+    	     gl_FragColor = textureCube(mapCube, -reflect(normalize(position - eye), normalize(position)));
+
+    		   }
+		</script>
+  <script src = "js/cuon-matrix.js"></script> 
+  <script src = "js/hekeyuMatrix.js"></script>
+  <script src = "boxBall.js"></script>
+    <script>
+const OFFSETWIDTH = 256;
+const OFFSETHEIGHT = 256;
+var canvas, gl;
+
+  canvas = document.getElementById("c");
+  gl = canvas.getContext("experimental-webgl");
+ 
+ 
+  cw = 600;
+  ch = 600;  
+  canvas.width = cw;
+  canvas.height = ch;
+  gl.viewport(0, 0, cw, ch);  
+  const ball = createProgram(gl, "shader-vs2", "shader-fs2"); 
+  const box = createProgram(gl, "shader-vs", "shader-fs");
+  
+var initBoxBuffer = function(){
+	  var vertices = new Float32Array([   // Coordinates
+     1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0, // v0-v1-v2-v3 front
+     1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0, // v0-v3-v4-v5 right
+     1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0, // v0-v5-v6-v1 up
+    -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0, // v1-v6-v7-v2 left
+    -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0, // v7-v4-v3-v2 down
+     1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
+  ]);
+  
+  var colors = new Float32Array([    // Colors 
+     0, 1, 0,   0, 1, 0,   0, 1, 0,  0, 1, 0,     // v0-v1-v2-v3 front  
+     1, 1, 0,   1, 1, 0,   1, 1, 0,  1, 1, 0,     // v0-v3-v4-v5 right
+     1, 0, 1,   1, 0, 1,   1, 0, 1,  1, 0, 1,     // v0-v5-v6-v1 up
+     0, 0, 1,   0, 0, 1,   0, 0, 1,  0, 0, 1,     // v1-v6-v7-v2 left
+     1, 0, 0,   1, 0, 0,   1, 0, 0,  1, 0, 0,     // v7-v4-v3-v2 down
+    0, 1, 1,   0, 1, 1,   0, 1, 1,  0, 1, 1　    // v4-v7-v6-v5 back
+ ]);
+  //z1黑色 x1蓝色  z-1绿色  x-1黄色 y1红色  y-1紫色  
+  var normals = new Float32Array([    // Normal
+    0.0, 0.0, -1.0,  0.0, 0.0, -1.0,   0.0, 0.0, -1.0,   0.0, 0.0, -1.0,  // v0-v1-v2-v3 front
+   -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,   -1.0, 0.0, 0.0,   -1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
+    0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  // v0-v5-v6-v1 up
+    1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  // v1-v6-v7-v2 left
+    0.0,1.0, 0.0,   0.0,1.0, 0.0,   0.0,1.0, 0.0,   0.0,1.0, 0.0,  // v7-v4-v3-v2 down
+    0.0, 0.0,1.0,   0.0, 0.0,1.0,   0.0, 0.0,1.0,   0.0, 0.0,1.0   // v4-v7-v6-v5 back
+  ]);
+  
+  var indices = new Uint8Array([
+     0, 1, 2,   0, 2, 3,    // front
+     4, 5, 6,   4, 6, 7,    // right
+     8, 9,10,   8,10,11,    // up
+    12,13,14,  12,14,15,    // left
+    16,17,18,  16,18,19,    // down
+    20,21,22,  20,22,23     // back
+ ]);
+  var verticesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  
+  var colorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  
+  var normalBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  
+  var indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  
+ return function(gl, program){
+ 	    gl.useProgram(program);
+			program.a_Position = gl.getAttribLocation(program, 'a_Position');
+			program.a_Normal = gl.getAttribLocation(program, 'a_Normal');
+			program.a_Color = gl.getAttribLocation(program, 'a_Color');
+			program.vertices = verticesBuffer;
+			program.colors = colorBuffer;
+			program.normals = normalBuffer;
+			program.indices = indexBuffer;
+			gl.useProgram(null);
+ }    
+}();
+
+initBoxBuffer(gl, box); 
+
+var initBallBuffer = function(){
+   var h = 60;   //经度细分数
+   var a = 60;   //纬度细分数
+   var r = 0.4; //半径
+   var vertices = [];
+   var normals = [];
+   var indices = [];
+   
+   var hd = Math.PI / h;           //经度细分弧度数
+   var ad = Math.PI * 2 / a;       //纬度细分弧度数
+   
+   vertices.push(0.0, 0.0, r);
+   normals.push(0.0, 0.0, r);
+   for(var i = 1; i < h; i++){
+      for(var j = 0; j < a; j++){
+      	vertices.push(Math.sin(i * hd) * Math.cos(j * ad) * r, 
+      								Math.sin(i * hd) * Math.sin(j * ad) * r,                
+      								Math.cos(i * hd) * r);
+      								
+      	normals.push( Math.sin(i * hd) * Math.cos(j * ad) * r, 
+      								Math.sin(i * hd) * Math.sin(j * ad) * r,                
+      								Math.cos(i * hd) * r);
+      }
+   }
+   vertices.push(0.0, 0.0, -r);
+   normals.push(0.0, 0.0, -r);
+   
+  
+
+   for(var i = 0; i < a; i++){                      //  层数 h - 1， 每一层顶点数  a
+       indices.push(0, 1 +(i + 1)%a , i + 1);	
+   }
+
+   
+   for(var i = 0; i < h - 2; i++)                  //需要执行的层数为 h - 2;  
+   		for(var j = 0; j < a; j++){                  //每一层的点 i * a + 1 + [0, a)
+   											                           //每一层都有 a 个点  第 i 层 第 j 个点 为   i * a + 1 + j
+   			                                           //这个点的下一个点为 i * a + 1 + (j + 1)%a
+   			  indices.push(i * a + 1 + j, i * a + 1 + (j + 1)%a,
+   			  				 (i+1) * a + 1 + j);
+   			  indices.push(i * a + 1 + (j + 1)%a, 
+   			           (i+1) * a + 1 + (j + 1)%a,
+   			           (i+1) * a + 1 + j);		  
+   			  
+   	}
+   
+   
+   var q = (h - 1) * a + 1; 
+    for(var i = 0; i < a; i++){                      
+   	  indices.push((h - 2) * a + 1 + i, (h - 2) * a + 1 + (i + 1)%a, q); 
+   }
+
+   	
+  var verticesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  
+  var normalBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  
+  var indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+   
+ return function(gl, program){
+ 	    gl.useProgram(program);
+			program.a_Position = gl.getAttribLocation(program, 'a_Position');
+			program.a_Normal = gl.getAttribLocation(program, 'a_Normal');
+			
+			program.vertices = verticesBuffer;
+			program.normals = normalBuffer;
+			program.indices = indexBuffer;
+			program.length = indices.length;
+			gl.useProgram(null);  
+ }  
+}();
+
+initBallBuffer(gl, ball);  
+
+var targets = [			 gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+                     gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+                     gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+                     gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+                     gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+                     gl.TEXTURE_CUBE_MAP_NEGATIVE_Z]; 
+                     
+function InitFBOCube() {
+    // WebGLFramebuffer 
+    fboBuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboBuffer);
+    fboBuffer.width = 512;
+    fboBuffer.height = 512;
+
+    cubeTexID = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexID);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    for (var i = 0; i < targets.length; i++) {
+        gl.texImage2D(targets[i], 0, gl.RGBA, fboBuffer.width, fboBuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+ 
+function InitBox(){
+  gl.useProgram(box);
+  gl.clearColor(0, 0, 0, 1);
+	box.u_ModelMatrix = gl.getUniformLocation(box, 'u_ModelMatrix');
+  box.u_MvpMatrix = gl.getUniformLocation(box, 'u_MvpMatrix');  
+  box.u_NormalMatrix = gl.getUniformLocation(box, 'u_NormalMatrix');
+  box.u_LightColor = gl.getUniformLocation(box, 'u_LightColor');
+  box.u_LightPosition = gl.getUniformLocation(box, 'u_LightPosition');
+  box.u_AmbientLight = gl.getUniformLocation(box, 'u_AmbientLight');
+  
+  gl.uniform3f(box.u_LightColor, 1.0, 1.0, 1.0);
+  gl.uniform3f(box.u_LightPosition, 0.2, 0.5, 0.5);
+  gl.uniform3f(box.u_AmbientLight, 0.2, 0.2, 0.2); 
+  var modelMatrix = new Matrix4();  // Model matrix
+  var mvpMatrix = new Matrix4();    // Model view projection matrix
+  var normalMatrix = new Matrix4(); // Transformation matrix for normals
+  
+  modelMatrix.setRotate(90, 0, 1, 0);
+  gl.uniformMatrix4fv(box.u_ModelMatrix, false, modelMatrix.elements);
+  normalMatrix.setInverseOf(modelMatrix);
+  normalMatrix.transpose();
+  gl.uniformMatrix4fv(box.u_NormalMatrix, false, normalMatrix.elements);
+  
+  initArrayBuffer(gl, box.vertices, box.a_Position);
+  initArrayBuffer(gl, box.normals, box.a_Normal);
+  initArrayBuffer(gl, box.colors, box.a_Color); 
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, box.indices);
+} 
+
+function RenderFBO() {
+    gl.disable(gl.DEPTH_TEST);
+    gl.viewport(0, 0, fboBuffer.width, fboBuffer.height);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboBuffer);
+    for (var i = 0; i < targets.length; i++) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, targets[i], cubeTexID, null);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
+
+    var per = SetPerspective(45, 1, 0.1, 200.0); 
+    for (var i = 0; i < targets.length; i++) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, targets[i], cubeTexID, null);
+        var lookat = [0.0, 0.0, 0.0];
+        var up = [0.0, 0.0, 0.0];
+        up[1] = 1.0;
+        if (i == 0) {
+            lookat[0] = -1.0;
+        } else if (i == 1) {
+            lookat[0] = 1.0;             
+        } else if (i == 2) {
+            lookat[1] = -1.0;
+            up[0] = 1.0;
+        } else if (i == 3) {
+            lookat[1] = 1.0;
+            up[0] = 1.0;
+        } else if (i == 4) {
+            lookat[2] = -1.0;         
+        } else if (i == 5) {
+            lookat[2] = 1.0;            
+        };          
+        
+   var look = LookAt(0.0 ,0.0, 0.0, lookat[0], lookat[1], lookat[2], up[0], up[1], up[2]);
+       
+
+   gl.uniformMatrix4fv(box.u_MvpMatrix, false, multiply(look, per)); 
+   gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_BYTE, 0); 
+    } 
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.enable(gl.DEPTH_TEST);
+    gl.useProgram(null);
+} 
+
+
+InitBox();
+InitFBOCube();
+RenderFBO();
+
+function InitBall(){
+	gl.useProgram(ball);
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	initArrayBuffer(gl, ball.vertices, ball.a_Position);
+	initArrayBuffer(gl, ball.normals, ball.a_Normal);
+	
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ball.indices);
+	
+	ball.u_MvpMatrix = gl.getUniformLocation(ball, 'u_MvpMatrix');
+  ball.rotation = gl.getUniformLocation(ball, 'rotation');
+  ball.eyePosition = gl.getUniformLocation(ball, 'eyePosition');
+  ball.invMatrix = gl.getUniformLocation(ball, 'invMatrix');
+  gl.uniform3f(ball.eyePosition, 0.0, 0.0, 3.0);
+  
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexID);
+  var mapCube = gl.getUniformLocation(ball, 'mapCube');
+  gl.uniform1i(mapCube, 0);
+}
+ 
+InitBall();
+ 
+
+function drawBox(last){
+
+	gl.useProgram(box);
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	initArrayBuffer(gl, box.vertices, box.a_Position);
+  initArrayBuffer(gl, box.normals, box.a_Normal);
+  initArrayBuffer(gl, box.colors, box.a_Color); 
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, box.indices);
+	gl.uniformMatrix4fv(box.u_MvpMatrix, false, last);
+	gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_BYTE, 0); 
+}
+
+function drawBall(last, rotate){
+
+	gl.useProgram(ball);
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	initArrayBuffer(gl, ball.vertices, ball.a_Position);
+	initArrayBuffer(gl, ball.normals, ball.a_Normal);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ball.indices);
+	
+  var inver = inverse(rotate);    
+  gl.uniformMatrix4fv(ball.invMatrix, false, inver);
+	gl.uniformMatrix4fv(ball.u_MvpMatrix, false, last);
+	gl.uniformMatrix4fv(ball.rotation, false, rotate); 
+	gl.drawElements(gl.TRIANGLES, ball.length, gl.UNSIGNED_SHORT, 0);
+}
+
+gl.enable(gl.DEPTH_TEST);
+  var pers = SetPerspective(90, canvas.width/canvas.height, 0.00001, 50);
+  var look = LookAt(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0); 
+  var last = multiply(look, pers);
+
+  var i = 1;
+
+function move(){
+    var rotate = multiply(rotateX(0), rotateY(i));
+	  last = multiply(rotate, last);
+	  drawBox(last);   
+		drawBall(last, rotate);
+		requestAnimationFrame(move);
+}
+    
+//move();
+
+
+   var currentAngle = [1.0, 0.0];  
+   initEventHandlers(canvas, currentAngle);
+    
+  function tick() {  
+  	
+   //  var rotate = multiply(rotateX(currentAngle[0]), rotateY(-currentAngle[1]));
+     var theta = Math.abs(currentAngle[0] * currentAngle[0] + currentAngle[1] * currentAngle[1]) / 20;
+     var rotate = rotateAxis(-currentAngle[0], -currentAngle[1], 0, theta);
+   //  inver = inverse(rotate); 
+   //  gl.uniformMatrix4fv(invMatrix, false, inver);
+     
+      
+     
+  	  var _last = new Float32Array(multiply(rotate, last));
+      drawBox(_last);
+		  drawBall(_last, rotate); 
+
+      requestAnimationFrame(tick, canvas);
+  };
+  tick();  
+//时时刻刻记住  drawElement参数 Uint8 对应  gl.UNSIGNED_BYTE         Uint16对应     gl.UNSIGNED_SHORT  以此类推 
+//attribute常量必须用类型化数组，普通数组外面套一层new Float32Array();   而Uniform不需要
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+

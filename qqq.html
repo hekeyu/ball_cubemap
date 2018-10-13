@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <meta charset="UTF-8">
+  <title>HTML5 WebGL粒子爆炸动画DEMO演示</title>
+  <style>
+  	body{    
+  		margin:0px;
+
+  	}
+  	canvas{ 
+  		
+  		margin:0px;
+  		position:absolute;
+  	}
+  </style>
+  
+</head>
+
+<body>
+  
+<canvas id="c"></canvas>
+<script id="shader-vs" type="x-shader/x-vertex">	    
+    	attribute vec4 a_Position;
+   	
+    	//uniform mat4 u_MvpMatrix;
+
+   	void main(void) { 
+  		  // gl_Position = u_MvpMatrix * a_Position;
+             gl_Position =  a_Position;
+  	}   
+  </script>
+<script id="shader-fs" type="x-shader/x-fragment">
+				#ifdef GL_ES               
+				  precision highp float;
+				#endif
+
+			  
+    		void main(void) {
+
+    		 gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+    		}
+		</script>
+//顶点着色器
+
+<script id="shader-vs2" type="x-shader/x-vertex">	    
+    	attribute vec4 a_Position;
+   	
+    	varying vec4 position;
+
+   	void main(void) { 
+  		     position = a_Position;
+             gl_Position =  a_Position;
+  	}   
+</script>
+<script id="shader-fs2" type="x-shader/x-fragment">
+				#ifdef GL_ES               
+				precision highp float;
+				#endif
+			uniform samplerCube mapCube;
+            varying vec4 position;
+            
+    		void main(void) {
+                gl_FragColor = textureCube(mapCube, position.rgb);
+ 
+    		}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <script src = "js\cuon-matrix.js"></script>
+<script>
+
+
+var canvas, gl;
+
+  canvas = document.getElementById("c");
+  gl = canvas.getContext("experimental-webgl");
+ 
+ 
+  cw = 600;
+  ch = 600;  
+  canvas.width = cw;
+  canvas.height = ch;
+  gl.viewport(0, 0, cw, ch);  
+
+  var vertexShaderScript = document.getElementById("shader-vs");
+  var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vertexShader, vertexShaderScript.text);
+  gl.compileShader(vertexShader);
+  
+  var fragmentShaderScript = document.getElementById("shader-fs");
+  var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fragmentShader, fragmentShaderScript.text);
+  gl.compileShader(fragmentShader);
+ 
+  gl.program = gl.createProgram();
+  gl.attachShader(gl.program, vertexShader);
+  gl.attachShader(gl.program, fragmentShader);
+  gl.linkProgram(gl.program);
+  gl.useProgram(gl.program); 
+  
+   var vertices = new Float32Array([   // Vertex coordinates
+
+     
+     -1, 1,  1, 1, 1, -1, -1, -1
+  ]);
+  var indices = new Uint8Array([       
+     0, 1, 2,   0, 2, 3,   
+    
+  ]);
+  var verticesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(0); 
+  
+  var indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+  
+  targets = [gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+                     gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+                     gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+                     gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+                     gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+                     gl.TEXTURE_CUBE_MAP_NEGATIVE_Z];
+  
+ 
+ 
+  InitFBOCube();
+  RenderFBO();
+  
+  gl.useProgram(null);
+  var fuck = gl.createProgram();
+  var vertexShaderScript = document.getElementById("shader-vs2");
+  var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vertexShader, vertexShaderScript.text);
+  gl.compileShader(vertexShader);
+  
+  var fragmentShaderScript = document.getElementById("shader-fs2");
+  var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fragmentShader, fragmentShaderScript.text);
+  gl.compileShader(fragmentShader);
+
+  gl.attachShader(fuck, vertexShader);
+  gl.attachShader(fuck, fragmentShader);
+  gl.linkProgram(fuck);
+  gl.useProgram(fuck); 
+  
+  
+  
+  var mapCube = gl.getUniformLocation(fuck, 'mapCube');
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexID);
+  //gl.uniform1i(mapCube, 0);
+  
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(0); 
+  gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_BYTE, 0);
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+   
+
+function InitFBOCube() {
+    // WebGLFramebuffer
+    fboBuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboBuffer);
+    fboBuffer.width = 512;
+    fboBuffer.height = 512;
+
+    cubeTexID = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexID);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    for (var i = 0; i < targets.length; i++) {
+        gl.texImage2D(targets[i], 0, gl.RGBA, fboBuffer.width, fboBuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+function RenderFBO() {
+    gl.disable(gl.DEPTH_TEST);
+    gl.viewport(0, 0, fboBuffer.width, fboBuffer.height);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboBuffer);
+    for (var i = 0; i < targets.length; i++) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, targets[i], cubeTexID, null);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
+
+   
+    for (var i = 0; i < targets.length; i++) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, targets[i], cubeTexID, null);
+        var lookat = [0.0, 0.0, 0.0];
+        var up = [0.0, 0.0, 0.0];
+        up[1] = 1.0;
+        if (i == 0) {
+            lookat[0] = -1.0;
+        } else if (i == 1) {
+            lookat[0] = 1.0;            
+        } else if (i == 2) {
+            lookat[1] = -1.0;
+            up[0] = 1.0;
+        } else if (i == 3) {
+            lookat[1] = 1.0;
+            up[0] = 1.0;
+        } else if (i == 4) {
+            lookat[2] == -1.0;            
+        } else if (i == 5) {
+            lookat[2] = 1.0;            
+        } else {         
+        }
+      
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_BYTE, 0);
+      
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.enable(gl.DEPTH_TEST);
+}
+  
+</script>
+
+</body>
+</html>
