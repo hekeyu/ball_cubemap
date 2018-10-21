@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html >
 <head>
   <meta charset="UTF-8">
@@ -463,8 +463,8 @@ function move(){
   	
    //  var rotate = multiply(rotateX(currentAngle[0]), rotateY(-currentAngle[1]));
      var theta = Math.abs(currentAngle[0] * currentAngle[0] + currentAngle[1] * currentAngle[1]) / 2;
-     
-     rotate =multiply(rotate, rotateAxis(-currentAngle[0], -currentAngle[1], 0, theta)); 
+     if(currentAngle[0] != 0 || currentAngle[1] != 0)
+   	  rotate =multiply(rotate, rotateAxis(-currentAngle[0], -currentAngle[1], 0, theta)); 
     //   var rotate = multiply(rotateX(-currentAngle[0]), rotateY(-currentAngle[1]));
    //  inver = inverse(rotate);
    //  gl.uniformMatrix4fv(invMatrix, false, inver);
