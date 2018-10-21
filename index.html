@@ -75,15 +75,17 @@
       varying vec3 normal;
       varying vec3 position;
       varying vec3 eye;
-      
+      varying float Ratio;
    	void main(void) {
-
+			
   		gl_Position =  u_MvpMatrix * a_Position;
   		normal = normalize(vec3(a_Normal));
   		
 			position = a_Position.xyz;
 			eye = vec3(invMatrix * vec4(eyePosition, 0.0));
 	
+		
+			
   	}   
 </script>
 <script id="shader-fs2" type="x-shader/x-fragment">
@@ -91,14 +93,17 @@
 				  precision mediump float;
 				  #endif
 				  uniform samplerCube mapCube;
-				  
+				   
 					varying vec3 normal;
 					varying vec3 position;
 					varying vec3 eye;
     		  void main(void) {
-    		   
-    	     gl_FragColor = textureCube(mapCube, -reflect(normalize(position - eye), normalize(position)));
-
+    		   vec3 R = -refract(position - eye,normal , 1.0/1.52); 
+    		   vec3 L = -reflect(normalize(position - eye), normalize(position));
+			 gl_FragColor = textureCube(mapCube, L) * 0.8 + textureCube(mapCube, R) * 0.2;
+ //   	 gl_FragColor = textureCube(mapCube, -reflect(normalize(position - eye), normalize(position)));
+	  
+			
     		   }
 		</script>
   <script src = "js/cuon-matrix.js"></script> 
@@ -449,23 +454,29 @@ function move(){
 
    var currentAngle = [1.0, 0.0];  
    initEventHandlers(canvas, currentAngle);
-    
+   var rotate = [1, 0, 0, 0,
+   							 0, 1, 0, 0,
+   							 0, 0, 1, 0,
+   							 0, 0, 0, 1 
+   							]   
   function tick() {  
   	
    //  var rotate = multiply(rotateX(currentAngle[0]), rotateY(-currentAngle[1]));
-     var theta = Math.abs(currentAngle[0] * currentAngle[0] + currentAngle[1] * currentAngle[1]) / 20;
-     var rotate = rotateAxis(-currentAngle[0], -currentAngle[1], 0, theta);
-   //  inver = inverse(rotate); 
+     var theta = Math.abs(currentAngle[0] * currentAngle[0] + currentAngle[1] * currentAngle[1]) / 2;
+     
+     rotate =multiply(rotate, rotateAxis(-currentAngle[0], -currentAngle[1], 0, theta)); 
+    //   var rotate = multiply(rotateX(-currentAngle[0]), rotateY(-currentAngle[1]));
+   //  inver = inverse(rotate);
    //  gl.uniformMatrix4fv(invMatrix, false, inver);
      
-      
+       
      
   	  var _last = new Float32Array(multiply(rotate, last));
       drawBox(_last);
 		  drawBall(_last, rotate); 
 
       requestAnimationFrame(tick, canvas);
-  };
+  }; 
   tick();  
 //时时刻刻记住  drawElement参数 Uint8 对应  gl.UNSIGNED_BYTE         Uint16对应     gl.UNSIGNED_SHORT  以此类推 
 //attribute常量必须用类型化数组，普通数组外面套一层new Float32Array();   而Uniform不需要
