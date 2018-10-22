@@ -38,6 +38,35 @@ function initEventHandlers(canvas, currentAngle) {
     }
     lastX = x, lastY = y;
   };
+
+  canvas.ontouchstart = function(ev){
+  	 var x = ev.clientX, y = ev.clientY;
+    // Start dragging if a moue is in <canvas>
+    var rect = ev.target.getBoundingClientRect();
+    if (rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom) {
+      lastX = x; lastY = y;
+      dragging = true;
+    }
+  };
+  
+  canvas.ontouchmove = function(){
+  	 var x = ev.clientX, y = ev.clientY;
+    if (dragging) { 
+      var factor = 100/canvas.height; // The rotation ratio
+      var dx = factor * (x - lastX);
+      var dy = factor * (y - lastY);
+      // Limit x-axis rotation angle to -90 to 90 degrees
+     // currentAngle[0] = Math.max(Math.min(currentAngle[0] + dy, 90.0), -90.0);
+    
+     currentAngle[0] = dy;
+     currentAngle[1] = dx;
+    }
+    lastX = x, lastY = y;
+  }
+  
+  canvas.ontouchend = function(ev){
+  	dragging = false;
+  }
 }
  
 
