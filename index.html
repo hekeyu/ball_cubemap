@@ -2,7 +2,7 @@
 <html >
 <head>
   <meta charset="UTF-8">
-  <title>啊啊</title>
+  <title>立方体贴图</title>
   <style>
   	body{    
   		margin:0px;
@@ -100,7 +100,7 @@
     		  void main(void) {
     		   vec3 R = -refract(position - eye,normal , 1.0/1.52); 
     		   vec3 L = -reflect(normalize(position - eye), normalize(position));
-			 gl_FragColor = textureCube(mapCube, L) * 0.8 + textureCube(mapCube, R) * 0.2;
+			 gl_FragColor = textureCube(mapCube, L) * 0.1 + textureCube(mapCube, R) * 0.9;
  //   	 gl_FragColor = textureCube(mapCube, -reflect(normalize(position - eye), normalize(position)));
 	  
 			
