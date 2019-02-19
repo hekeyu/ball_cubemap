@@ -76,6 +76,9 @@
       varying vec3 position;
       varying vec3 eye;
       varying float Ratio;
+      
+     
+				
    	void main(void) {
 			
   		gl_Position =  u_MvpMatrix * a_Position;
@@ -97,13 +100,25 @@
 					varying vec3 normal;
 					varying vec3 position;
 					varying vec3 eye;
+					 	vec3 fresnelSchlick(float cosTheta, vec3 F0)
+				{
+				    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+				}
+				
     		  void main(void) {
-    		   vec3 R = -refract(position - eye,normal , 1.0/1.52); 
+    		  	
+    	    vec3 albedo = vec3(0.0, 0.0, 0.0);
+  			  float metallic = 0.3; 
+   			  vec3 F0 = vec3(0.02);
+          F0 = mix(F0, albedo, metallic);
+          
+        vec3 F = fresnelSchlick(max(dot(normal, normalize(eye - position)), 0.0), F0);
+           
+    		   vec3 R = -refract(position - eye,normal , 1.0/1.32); 
     		   vec3 L = -reflect(normalize(position - eye), normalize(position));
-			 gl_FragColor = textureCube(mapCube, L) * 0.1 + textureCube(mapCube, R) * 0.9;
- //   	 gl_FragColor = textureCube(mapCube, -reflect(normalize(position - eye), normalize(position)));
-	  
-			
+		 	 gl_FragColor = textureCube(mapCube, L) * F.x + textureCube(mapCube, R) * (1.0 - F.x);
+			 
+	   //  gl_FragColor = vec4(1.0 - F, 1.0);
     		   }
 		</script>
   <script src = "js/cuon-matrix.js"></script> 
@@ -396,7 +411,7 @@ function InitBall(){
   ball.rotation = gl.getUniformLocation(ball, 'rotation');
   ball.eyePosition = gl.getUniformLocation(ball, 'eyePosition');
   ball.invMatrix = gl.getUniformLocation(ball, 'invMatrix');
-  gl.uniform3f(ball.eyePosition, 0.0, 0.0, 3.0);
+  gl.uniform3f(ball.eyePosition, 0.0, 0.0, 1.4);
   
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexID);
